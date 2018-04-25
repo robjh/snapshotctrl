@@ -1,6 +1,5 @@
 #!/usr/bin/python3
 
-import subprocess
 import argparse
 import os
 import time
@@ -8,6 +7,7 @@ import datetime
 import math
 
 import snapsdb
+import actor_btrfs
 
 g_snapshot_count = 0
 
@@ -46,6 +46,10 @@ def main():
 
 	g_snapshot_count = db.snapshot_count_since(today);
 
+
+	actor = actor_btrfs.Actor_Btrfs(args)
+
+
 	schedules_all = db.schedules()
 	schedules_applicable = []
 	for sch in schedules_all:
@@ -73,10 +77,8 @@ def main():
 
 		db.close()
 
-		new_snapshot = os.path.join(args.snapshots, name)
 		# create the snapshot on the filesystem
-#		print("/bin/btrfs subvol snapshot -r {} {}".format(os.path.normpath(args.subvolume), new_snapshot))
-		subprocess.call(["/bin/btrfs", "subvol", "snapshot", "-r", os.path.normpath(args.subvolume), new_snapshot])
+		actor.create(name)
 
 		to_delete = []
 		if len(old_relationships):
@@ -92,8 +94,7 @@ def main():
 			snaps = db.snapshot_get(to_delete)
 			db.snapshot_expire(to_delete)
 			for snap in snaps:
-#				print("/bin/btrfs subvol delete {}".format(os.path.join(args.snapshots, snap['filename'])))
-				subprocess.call(["/bin/btrfs", "subvol", "delete", os.path.join(args.snapshots, snap['filename'])])
+				actor.delete(snap['filename'])
 
 
 	db.close()
